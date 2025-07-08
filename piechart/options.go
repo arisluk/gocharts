@@ -21,6 +21,12 @@ func WithAspectRatio(aspectRatio int) Option {
 	}
 }
 
+func WithValuePrefix(valuePrefix string) Option {
+	return func(m *Model) {
+		m.valuePrefix = valuePrefix
+	}
+}
+
 func WithData(data PieData) Option {
 	return func(m *Model) {
 		m.PushAll(data.Values)

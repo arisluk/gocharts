@@ -1,6 +1,7 @@
 package piechart
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 const POINT_SYMBOL = "•"
 const LEGEND_PADDING = 3
+const PERCENT_WIDTH = 4
 
 // PieValue represents a value in the pie chart.
 type PieValue struct {
@@ -32,6 +34,7 @@ type Model struct {
 	centerX     int
 	centerY     int
 	aspectRatio int
+	valuePrefix string
 	sum         float64
 	data        *PieData
 }
@@ -44,6 +47,7 @@ func New(radius int, opts ...Option) Model {
 		centerX:     radius * 2,
 		centerY:     radius,
 		aspectRatio: 2,
+		valuePrefix: "",
 		sum:         0,
 		data:        &PieData{},
 	}
@@ -131,9 +135,26 @@ func (m *Model) View() string {
 
 		if m.showLegend {
 			if y >= legendBoundaryStart && y <= legendBoundaryEnd && labelIndex < len(m.data.Values) {
+				maxNameLen := 0
+				for _, v := range m.data.Values {
+					if len(v.Name) > maxNameLen {
+						maxNameLen = len(v.Name)
+					}
+				}
+				valueWidth := 0
+				for _, v := range m.data.Values {
+					if len(fmt.Sprintf("%s%.2f", m.valuePrefix, v.Value)) > valueWidth {
+						valueWidth = len(fmt.Sprintf("%s%.2f", m.valuePrefix, v.Value))
+					}
+				}
+
+				name := fmt.Sprintf("%-*s", maxNameLen, m.data.Values[labelIndex].Name)
+				percent := fmt.Sprintf("%*.0f%%", PERCENT_WIDTH-1, m.data.Values[labelIndex].Value/m.sum*100)
+				value := fmt.Sprintf("[%s%*s]", m.valuePrefix, valueWidth, fmt.Sprintf("%.2f", m.data.Values[labelIndex].Value))
+
 				sb.WriteString(strings.Repeat(" ", m.centerX-width+LEGEND_PADDING))
 				sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(m.data.Values[labelIndex].Color)).Render(POINT_SYMBOL))
-				sb.WriteString(" " + m.data.Values[labelIndex].Name)
+				sb.WriteString(" " + name + " " + percent + " " + value)
 				sb.WriteString(strings.Repeat(" ", LEGEND_PADDING))
 				labelIndex++
 			}
