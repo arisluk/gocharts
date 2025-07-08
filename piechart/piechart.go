@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -29,27 +30,39 @@ type PieData struct {
 
 // Model represents the model for the pie chart.
 type Model struct {
-	showLegend  bool
-	radius      int
-	centerX     int
-	centerY     int
-	aspectRatio int
-	valuePrefix string
-	sum         float64
-	data        *PieData
+	showLegend    bool
+	withAnimation bool
+	radius        int
+	centerX       int
+	centerY       int
+	aspectRatio   float64
+	valuePrefix   string
+	sum           float64
+	data          *PieData
+
+	// Animation state
+	sweepAngle         float64
+	animationStartTime time.Time
+	animationDuration  time.Duration
 }
 
 // New creates a new pie chart model.
 func New(radius int, opts ...Option) Model {
 	m := Model{
-		showLegend:  true,
-		radius:      radius,
-		centerX:     radius * 2,
-		centerY:     radius,
-		aspectRatio: 2,
-		valuePrefix: "",
-		sum:         0,
-		data:        &PieData{},
+		showLegend:    true,
+		withAnimation: false,
+		radius:        radius,
+		centerX:       radius * 2,
+		centerY:       radius,
+		aspectRatio:   2.0,
+		valuePrefix:   "",
+		sum:           0,
+		data:          &PieData{},
+
+		// Initialize animation state
+		sweepAngle:         0,
+		animationStartTime: time.Now(),
+		animationDuration:  500 * time.Millisecond,
 	}
 
 	for _, opt := range opts {
@@ -89,14 +102,49 @@ func (m *Model) PopulateAngles() {
 	}
 }
 
-// Select the item from the pie chart based on the angle
+// Select the item from the pie chart based on the angle, respecting sweep animation
 func (m *Model) SelectItemFromAngle(angle float64) *PieValue {
-	for _, v := range m.data.Values {
+	for _, v := range m.getVisibleSegments() {
 		if (360/2 - angle) <= v.Angle {
 			return v
 		}
 	}
 	return nil
+}
+
+// getVisibleSegments returns only the segments that should be visible based on animation
+func (m *Model) getVisibleSegments() []*PieValue {
+	if !m.withAnimation {
+		return m.data.Values
+	}
+
+	visibleSegments := make([]*PieValue, 0)
+
+	for _, v := range m.data.Values {
+		if v.Angle <= m.sweepAngle {
+			visibleSegments = append(visibleSegments, v)
+		} else {
+			if len(visibleSegments) == 0 || visibleSegments[len(visibleSegments)-1].Angle < m.sweepAngle {
+				prevAngle := 0.0
+				if len(visibleSegments) > 0 {
+					prevAngle = visibleSegments[len(visibleSegments)-1].Angle
+				}
+
+				if m.sweepAngle > prevAngle {
+					partialSegment := &PieValue{
+						Name:  v.Name,
+						Color: v.Color,
+						Value: v.Value * (m.sweepAngle - prevAngle) / (v.Angle - prevAngle),
+						Angle: m.sweepAngle,
+					}
+					visibleSegments = append(visibleSegments, partialSegment)
+				}
+			}
+			break
+		}
+	}
+
+	return visibleSegments
 }
 
 // Render
@@ -111,9 +159,9 @@ func (m *Model) View() string {
 	legendBoundaryEnd := m.radius - int(legendPadding)
 
 	for y := -m.radius; y < m.radius+1; y++ {
-		width := int(math.Round(math.Sqrt(float64(m.radius*m.radius)-float64(y)*float64(y)) * float64(m.aspectRatio)))
-		if width == 0 && m.aspectRatio != 1 {
-			width = int(math.Round(float64(m.radius) / float64(m.aspectRatio)))
+		width := int(math.Round(math.Sqrt(float64(m.radius*m.radius)-float64(y)*float64(y)) * m.aspectRatio))
+		if width == 0 && m.aspectRatio != 1.0 {
+			width = int(math.Round(float64(m.radius) / m.aspectRatio))
 		}
 
 		padding := m.centerX - width
@@ -166,4 +214,49 @@ func (m *Model) View() string {
 	}
 
 	return sb.String()
+}
+
+// UpdateAnimation updates the animation state using linear progression
+func (m *Model) UpdateAnimation() {
+	if !m.withAnimation {
+		m.sweepAngle = 360
+		return
+	}
+
+	elapsed := time.Since(m.animationStartTime)
+	progress := float64(elapsed) / float64(m.animationDuration)
+
+	if progress >= 1.0 {
+		progress = 1.0
+		m.sweepAngle = 360.0
+		return
+	}
+
+	uniformAngleRad := progress * 2.0 * math.Pi
+	x := 1 / m.aspectRatio * math.Cos(uniformAngleRad)
+	y := math.Sin(uniformAngleRad)
+	correctedAngleRad := math.Atan2(y, x)
+	correctedAngleDeg := correctedAngleRad * 180.0 / math.Pi
+
+	if correctedAngleDeg < 0 {
+		correctedAngleDeg += 360
+	}
+
+	m.sweepAngle = correctedAngleDeg
+}
+
+// IsAnimationComplete returns true if the animation has finished
+func (m *Model) IsAnimationComplete() bool {
+	if !m.withAnimation {
+		return true
+	}
+	return time.Since(m.animationStartTime) >= m.animationDuration
+}
+
+// RestartAnimation resets the animation to the beginning
+func (m *Model) RestartAnimation() {
+	if m.withAnimation {
+		m.sweepAngle = 0
+		m.animationStartTime = time.Now()
+	}
 }
