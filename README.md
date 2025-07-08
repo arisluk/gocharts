@@ -2,7 +2,11 @@
 
 [BubbleTea](https://github.com/charmbracelet/bubbletea) compatible chart package that renders charts in the terminal.
 
-Currently supports pie charts.
+## Features
+
+| Feature     | Status      |
+| ------------- | ------------- |
+| `piechart` | Complete ✅ |
 
 ## API
 
@@ -16,14 +20,16 @@ Currently supports pie charts.
 | `piechart.IsAnimationComplete()` | Check if animation is completed |
 | `piechart.RestartAnimation()` | Restart animation |
 
-### Options
-* `piechart.WithData(piechart.PieData)` to populate the piechart with data.
-* `piechart.WithShowLegend(bool)` to show or hide legend.
-* `piechart.WithRadius(int)` to modify radius.
-* `piechart.WithAspectRatio(float64)` to modify the aspect ratio, where the aspect ratio is the ratio width/height.
-* `piechart.WithValuePrefix(string)` to add a prefix to the displayed values in the legend.
-* `piechart.WithAnimation(bool)` to turn on or off the sweeping animation when rendering.
-* `piechart.WithAnimationDuration(time.Duration)` to modify the duration of the sweeping animation.
+### Init Options
+| Option     | Usage      |
+| ------------- | ------------- |
+| `piechart.WithData(piechart.PieData)` | to populate the piechart with data |
+| `piechart.WithShowLegend(bool)` | to show or hide legend |
+| `piechart.WithRadius(int)` | to modify radius |
+| `piechart.WithAspectRatio(float64)` | to modify the aspect ratio, where the aspect ratio is the ratio width/height |
+| `piechart.WithValuePrefix(string)` | to add a prefix to the displayed values in the legend |
+| `piechart.WithAnimation(bool)` | to turn on or off the sweeping animation when rendering |
+| `piechart.WithAnimationDuration(time.Duration)` | to modify the duration of the sweeping animation |
 
 ## References
 
