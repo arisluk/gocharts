@@ -92,7 +92,7 @@ func (m *Model) PushAll(data []*PieValue) {
 }
 
 // Populate the angles for the pie chart
-func (m *Model) PopulateAngles() {
+func (m *Model) populateAngles() {
 	startAngle := 0.0
 	for i, v := range m.data.Values {
 		angle := v.Value / m.sum * 360
@@ -103,7 +103,7 @@ func (m *Model) PopulateAngles() {
 }
 
 // Select the item from the pie chart based on the angle, respecting sweep animation
-func (m *Model) SelectItemFromAngle(angle float64) *PieValue {
+func (m *Model) selectItemFromAngle(angle float64) *PieValue {
 	for _, v := range m.getVisibleSegments() {
 		if (360/2 - angle) <= v.Angle {
 			return v
@@ -151,7 +151,7 @@ func (m *Model) getVisibleSegments() []*PieValue {
 func (m *Model) View() string {
 	var sb strings.Builder
 
-	m.PopulateAngles()
+	m.populateAngles()
 
 	labelIndex := 0
 	legendPadding := math.Ceil(float64((m.radius*2 + 1 - len(m.data.Values))) / 2.0)
@@ -173,7 +173,7 @@ func (m *Model) View() string {
 		for x := -width; x < width+1; x++ {
 			angle := math.Atan2(float64(x), float64(y)) * (180 / math.Pi)
 
-			item := m.SelectItemFromAngle(angle)
+			item := m.selectItemFromAngle(angle)
 			if item != nil {
 				sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(item.Color)).Render(POINT_SYMBOL))
 			} else {
